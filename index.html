@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DHL Tracking System</title>
+
+<style>
+body{
+  font-family: Arial;
+  background: linear-gradient(135deg,#ff6b6b,#feca57,#ff9ff3);
+  min-height:100vh;
+  padding:20px;
+}
+
+.container{
+  max-width:800px;
+  margin:auto;
+  background:#fff;
+  padding:25px;
+  border-radius:20px;
+}
+
+input,button{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+}
+
+.result{
+  display:none;
+  margin-top:20px;
+  padding:20px;
+  background:#00b894;
+  color:#fff;
+  border-radius:15px;
+}
+
+/* TRACK */
+.track-line{
+  position:relative;
+  height:10px;
+  background:#ddd;
+  border-radius:20px;
+  margin:20px 0;
+  overflow:hidden;
+}
+
+.progress{
+  height:100%;
+  background:#00c853;
+  width:0%;
+  transition:width 1s linear;
+}
+
+.truck{
+  position:absolute;
+  top:-18px;
+  font-size:28px;
+  transform:translateX(-50%);
+  transition:left 1s linear;
+}
+
+/* DHL BUTTON */
+.dhl-logo{
+  position:fixed;
+  bottom:25px;
+  right:25px;
+  background:#ffcc00;
+  color:#111;
+  font-weight:bold;
+  font-size:20px;
+  padding:12px 18px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🚚 DHL Tracking System</h2>
+
+<input id="search" placeholder="DHL-XXXXXX">
+<button onclick="search()">بحث</button>
+
+<div id="result" class="result"></div>
+
+<hr>
+
+<h3>➕ إضافة شحنة</h3>
+
+<input id="name" placeholder="Name">
+<input id="phone" placeholder="Phone">
+<input id="address" placeholder="Address">
+<input id="price" placeholder="Price €">
+
+<input id="image" type="file" accept="image/*">
+
+<button onclick="add()">Add</button>
+
+</div>
+
+<!-- زر DHL -->
+<div class="dhl-logo" onclick="dhlClick()">DHL</div>
+
+<!-- لوحة الإدارة -->
+<div class="result" id="adminPanel" style="background:#222;color:#fff;">
+  <h3>🔐 Admin Panel</h3>
+  <p>تم فتح لوحة الإدارة</p>
+</div>
+
+<script>
+
+let shipments = JSON.parse(localStorage.getItem("dhl")) || [];
+
+/* 🔐 SECRET CLICK SYSTEM */
+let clickCount = 0;
+const ADMIN_PASSWORD = "200911";
+
+function dhlClick(){
+
+  clickCount++;
+
+  if(clickCount < 10){
+    return;
+  }
+
+  clickCount = 0;
+
+  const pass = prompt("🔐 Enter Password:");
+
+  if(pass === ADMIN_PASSWORD){
+    document.getElementById("adminPanel").style.display = "block";
+  }else{
+    alert("❌ Wrong password");
+  }
+}
+
+/* ➕ ADD SHIPMENT */
+function add(){
+
+  const file = document.getElementById("image").files[0];
+
+  if(!file){
+    alert("اختر صورة");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+
+    const code = "DHL-" + Math.floor(Math.random()*900000+100000);
+
+    shipments.unshift({
+      code,
+      name:document.getElementById("name").value,
+      phone:document.getElementById("phone").value,
+      address:document.getElementById("address").value,
+      price:document.getElementById("price").value,
+      image:e.target.result,
+      createdAt:Date.now()
+    });
+
+    localStorage.setItem("dhl",JSON.stringify(shipments));
+
+    alert("✅ تم إنشاء الشحنة\n" + code);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+/* 🔍 SEARCH */
+function search(){
+
+  const code = document.getElementById("search").value.toUpperCase();
+  const result = document.getElementById("result");
+
+  const s = shipments.find(x=>x.code===code);
+
+  if(!s){
+    result.style.display="block";
+    result.innerHTML="❌ Not Found";
+    return;
+  }
+
+  const now = Date.now();
+
+  // ⏳ 6 أيام = 144 ساعة
+  let progress = ((now - s.createdAt) / (1000*60*60)) / 144 * 100;
+
+  if(progress > 100) progress = 100;
+
+  result.style.display="block";
+
+  result.innerHTML=`
+    <h2>📦 Tracking</h2>
+
+    <h3>${s.code}</h3>
+
+    <div class="track-line">
+      <div class="progress" style="width:${progress}%"></div>
+      <div class="truck" style="left:${progress}%">🚚</div>
+    </div>
+
+    <p>Progress: ${Math.floor(progress)}%</p>
+
+    <p>👤 ${s.name}</p>
+    <p>📞 ${s.phone}</p>
+    <p>📍 ${s.address}</p>
+    <p>💰 ${s.price} €</p>
+
+    <img src="${s.image}" style="max-width:200px;border-radius:10px;margin-top:10px;">
+  `;
+}
+
+</script>
+
+</body>
+  </html>
